@@ -3,6 +3,7 @@ package dto
 // ConflictResponse describes a single scheduling conflict and a suggested fix.
 type ConflictResponse struct {
 	Type       string `json:"type"`
+	Semester   string `json:"semester"`
 	EntityType string `json:"entity_type"`
 	EntityID   uint   `json:"entity_id"`
 	EntityName string `json:"entity_name"`

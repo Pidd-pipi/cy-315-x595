@@ -81,6 +81,7 @@ func New(h Handlers, logger *slog.Logger) *gin.Engine {
 		schedules := api.Group("/schedules")
 		{
 			schedules.GET("", h.Schedule.List)
+			schedules.GET("/semesters", h.Schedule.Semesters)
 			schedules.POST("/generate", h.Schedule.Generate)
 			schedules.GET("/conflicts", h.Schedule.Conflicts)
 			schedules.GET("/adjustments", h.Schedule.Adjustments)

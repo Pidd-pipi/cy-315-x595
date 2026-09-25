@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -28,7 +29,14 @@ func Error(c *gin.Context, err error) {
 	case errors.Is(err, service.ErrNotFound):
 		c.JSON(http.StatusNotFound, dto.Response{Code: constants.CodeNotFound, Message: constants.MsgNotFound, Data: nil})
 	case errors.Is(err, service.ErrInvalid):
-		c.JSON(http.StatusBadRequest, dto.Response{Code: constants.CodeBadRequest, Message: constants.MsgBadRequest, Data: nil})
+		// Keep the concrete reason so callers know what to fix (e.g. an
+		// empty semester name or a cross-semester lesson move). The sentinel
+		// may be wrapped by one or more operation prefixes.
+		message := constants.MsgBadRequest
+		if _, reason, found := strings.Cut(err.Error(), "invalid input: "); found && reason != "" {
+			message = reason
+		}
+		c.JSON(http.StatusBadRequest, dto.Response{Code: constants.CodeBadRequest, Message: message, Data: nil})
 	case errors.Is(err, service.ErrConflict):
 		c.JSON(http.StatusConflict, dto.Response{Code: constants.CodeConflict, Message: constants.MsgConflict, Data: nil})
 	default:

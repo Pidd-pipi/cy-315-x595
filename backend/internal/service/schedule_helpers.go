@@ -323,6 +323,34 @@ func contains(items []string, target string) bool {
 	return false
 }
 
+func (s *scheduleService) enrichSchedules(ctx context.Context, items []model.Schedule) ([]dto.ScheduleResponse, error) {
+	timeSlots, _, err := s.timeSlots.List(ctx, 1, constants.MaxPageSize)
+	if err != nil {
+		return nil, fmt.Errorf("load time slots: %w", err)
+	}
+	slotMap := map[uint]model.TimeSlot{}
+	for i := range timeSlots {
+		slotMap[timeSlots[i].ID] = timeSlots[i]
+	}
+	classroomMap, err := s.classroomMap(ctx, items)
+	if err != nil {
+		return nil, err
+	}
+	teacherMap, err := s.teacherMap(ctx, items)
+	if err != nil {
+		return nil, err
+	}
+	classMap, err := s.classMap(ctx, items)
+	if err != nil {
+		return nil, err
+	}
+	courseMap, err := s.courseMap(ctx, items)
+	if err != nil {
+		return nil, err
+	}
+	return enrichSchedules(items, slotMap, classroomMap, teacherMap, classMap, courseMap), nil
+}
+
 func weekRange(weeks int) []uint {
 	out := make([]uint, 0, weeks)
 	for i := 1; i <= weeks; i++ {
@@ -377,6 +405,7 @@ func enrichSchedules(items []model.Schedule, slots map[uint]model.TimeSlot, clas
 		course := courses[item.CourseID]
 		out = append(out, dto.ScheduleResponse{
 			ID:            item.ID,
+			Semester:      item.Semester,
 			Week:          item.Week,
 			DayOfWeek:     item.DayOfWeek,
 			TimeSlotID:    item.TimeSlotID,

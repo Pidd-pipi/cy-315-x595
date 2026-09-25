@@ -24,10 +24,11 @@ func NewStatisticsHandler(service service.ScheduleService, logger *slog.Logger) 
 // @Summary Get classroom utilization statistics
 // @Tags statistics
 // @Produce json
+// @Param semester query string false "semester (defaults to the most recently generated semester)"
 // @Success 200 {object} dto.Response
 // @Router /api/v1/statistics/classrooms [get]
 func (h *StatisticsHandler) ClassroomUtilization(c *gin.Context) {
-	items, err := h.service.ClassroomUtilization(c.Request.Context())
+	items, err := h.service.ClassroomUtilization(c.Request.Context(), optionalSemester(c))
 	if err != nil {
 		Error(c, err)
 		return
@@ -39,10 +40,11 @@ func (h *StatisticsHandler) ClassroomUtilization(c *gin.Context) {
 // @Summary Get teacher workload statistics
 // @Tags statistics
 // @Produce json
+// @Param semester query string false "semester (defaults to the most recently generated semester)"
 // @Success 200 {object} dto.Response
 // @Router /api/v1/statistics/teachers [get]
 func (h *StatisticsHandler) TeacherWorkload(c *gin.Context) {
-	items, err := h.service.TeacherWorkload(c.Request.Context())
+	items, err := h.service.TeacherWorkload(c.Request.Context(), optionalSemester(c))
 	if err != nil {
 		Error(c, err)
 		return
@@ -54,10 +56,11 @@ func (h *StatisticsHandler) TeacherWorkload(c *gin.Context) {
 // @Summary Get course density heatmap data
 // @Tags statistics
 // @Produce json
+// @Param semester query string false "semester (defaults to the most recently generated semester)"
 // @Success 200 {object} dto.Response
 // @Router /api/v1/statistics/density [get]
 func (h *StatisticsHandler) CourseDensity(c *gin.Context) {
-	items, err := h.service.CourseDensity(c.Request.Context())
+	items, err := h.service.CourseDensity(c.Request.Context(), optionalSemester(c))
 	if err != nil {
 		Error(c, err)
 		return

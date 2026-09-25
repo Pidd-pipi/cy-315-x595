@@ -8,10 +8,15 @@ import (
 	"gorm.io/gorm"
 )
 
+// AdjustmentLogFilter contains optional filters for adjustment history.
+type AdjustmentLogFilter struct {
+	Semester *string
+}
+
 // AdjustmentLogRepository persists manual adjustment history.
 type AdjustmentLogRepository interface {
 	Create(ctx context.Context, log *model.AdjustmentLog) error
-	List(ctx context.Context, page, pageSize int) ([]model.AdjustmentLog, int64, error)
+	List(ctx context.Context, filter AdjustmentLogFilter, page, pageSize int) ([]model.AdjustmentLog, int64, error)
 }
 
 type adjustmentLogRepository struct {
@@ -30,13 +35,17 @@ func (r *adjustmentLogRepository) Create(ctx context.Context, log *model.Adjustm
 	return nil
 }
 
-func (r *adjustmentLogRepository) List(ctx context.Context, page, pageSize int) ([]model.AdjustmentLog, int64, error) {
+func (r *adjustmentLogRepository) List(ctx context.Context, filter AdjustmentLogFilter, page, pageSize int) ([]model.AdjustmentLog, int64, error) {
+	query := r.db.WithContext(ctx).Model(&model.AdjustmentLog{})
+	if filter.Semester != nil {
+		query = query.Where("semester = ?", *filter.Semester)
+	}
 	var items []model.AdjustmentLog
 	var total int64
-	if err := r.db.WithContext(ctx).Model(&model.AdjustmentLog{}).Count(&total).Error; err != nil {
+	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("count adjustment logs: %w", err)
 	}
-	if err := paginate(r.db.WithContext(ctx).Model(&model.AdjustmentLog{}), page, pageSize).
+	if err := paginate(query, page, pageSize).
 		Order("id DESC").Find(&items).Error; err != nil {
 		return nil, 0, fmt.Errorf("list adjustment logs: %w", err)
 	}

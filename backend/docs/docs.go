@@ -42,7 +42,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -65,7 +65,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.CreateClassRequest"
+                            "$ref": "#/definitions/dto.CreateClassRequest"
                         }
                     }
                 ],
@@ -73,7 +73,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -101,7 +101,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -131,7 +131,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.UpdateClassRequest"
+                            "$ref": "#/definitions/dto.UpdateClassRequest"
                         }
                     }
                 ],
@@ -139,7 +139,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -165,7 +165,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -198,7 +198,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -221,7 +221,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.CreateClassroomRequest"
+                            "$ref": "#/definitions/dto.CreateClassroomRequest"
                         }
                     }
                 ],
@@ -229,7 +229,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -257,7 +257,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -287,7 +287,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.UpdateClassroomRequest"
+                            "$ref": "#/definitions/dto.UpdateClassroomRequest"
                         }
                     }
                 ],
@@ -295,7 +295,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -321,7 +321,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -354,7 +354,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -377,7 +377,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.CreateCourseRequest"
+                            "$ref": "#/definitions/dto.CreateCourseRequest"
                         }
                     }
                 ],
@@ -385,7 +385,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -413,7 +413,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -443,7 +443,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.UpdateCourseRequest"
+                            "$ref": "#/definitions/dto.UpdateCourseRequest"
                         }
                     }
                 ],
@@ -451,7 +451,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -477,7 +477,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -493,6 +493,12 @@ const docTemplate = `{
                 ],
                 "summary": "List timetable entries",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "semester (defaults to the most recently generated semester)",
+                        "name": "semester",
+                        "in": "query"
+                    },
                     {
                         "type": "integer",
                         "description": "week",
@@ -522,7 +528,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -538,6 +544,12 @@ const docTemplate = `{
                 ],
                 "summary": "List adjustment history",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "semester (defaults to the most recently generated semester)",
+                        "name": "semester",
+                        "in": "query"
+                    },
                     {
                         "type": "integer",
                         "description": "page",
@@ -555,7 +567,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -569,12 +581,20 @@ const docTemplate = `{
                 "tags": [
                     "schedules"
                 ],
-                "summary": "Detect conflicts in the current timetable",
+                "summary": "Detect conflicts in a semester timetable",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "semester (defaults to the most recently generated semester)",
+                        "name": "semester",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -588,7 +608,7 @@ const docTemplate = `{
                 "tags": [
                     "schedules"
                 ],
-                "summary": "Export a timetable as JSON or CSV",
+                "summary": "Export a semester timetable as JSON or CSV",
                 "parameters": [
                     {
                         "type": "string",
@@ -603,6 +623,12 @@ const docTemplate = `{
                         "name": "id",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "semester (defaults to the most recently generated semester)",
+                        "name": "semester",
+                        "in": "query"
                     },
                     {
                         "type": "integer",
@@ -621,7 +647,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -638,7 +664,7 @@ const docTemplate = `{
                 "tags": [
                     "schedules"
                 ],
-                "summary": "Generate a timetable",
+                "summary": "Generate a timetable for a semester",
                 "parameters": [
                     {
                         "description": "scheduling input",
@@ -646,7 +672,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.GenerateScheduleRequest"
+                            "$ref": "#/definitions/dto.GenerateScheduleRequest"
                         }
                     }
                 ],
@@ -654,7 +680,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -671,7 +697,7 @@ const docTemplate = `{
                 "tags": [
                     "schedules"
                 ],
-                "summary": "Move a timetable entry to a free slot",
+                "summary": "Move a timetable entry to a free slot within the same semester",
                 "parameters": [
                     {
                         "description": "move payload",
@@ -679,7 +705,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.MoveScheduleRequest"
+                            "$ref": "#/definitions/dto.MoveScheduleRequest"
                         }
                     }
                 ],
@@ -687,7 +713,26 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/schedules/semesters": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "schedules"
+                ],
+                "summary": "List semesters that have timetable entries",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -712,7 +757,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.SwapScheduleRequest"
+                            "$ref": "#/definitions/dto.SwapScheduleRequest"
                         }
                     }
                 ],
@@ -720,7 +765,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -748,7 +793,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -763,11 +808,19 @@ const docTemplate = `{
                     "statistics"
                 ],
                 "summary": "Get classroom utilization statistics",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "semester (defaults to the most recently generated semester)",
+                        "name": "semester",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -782,11 +835,19 @@ const docTemplate = `{
                     "statistics"
                 ],
                 "summary": "Get course density heatmap data",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "semester (defaults to the most recently generated semester)",
+                        "name": "semester",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -801,11 +862,19 @@ const docTemplate = `{
                     "statistics"
                 ],
                 "summary": "Get teacher workload statistics",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "semester (defaults to the most recently generated semester)",
+                        "name": "semester",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -838,7 +907,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -861,7 +930,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.CreateTeacherRequest"
+                            "$ref": "#/definitions/dto.CreateTeacherRequest"
                         }
                     }
                 ],
@@ -869,7 +938,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -897,7 +966,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -927,7 +996,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.UpdateTeacherRequest"
+                            "$ref": "#/definitions/dto.UpdateTeacherRequest"
                         }
                     }
                 ],
@@ -935,7 +1004,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -961,7 +1030,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -994,7 +1063,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -1017,7 +1086,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.CreateTimeSlotRequest"
+                            "$ref": "#/definitions/dto.CreateTimeSlotRequest"
                         }
                     }
                 ],
@@ -1025,7 +1094,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -1053,7 +1122,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -1083,7 +1152,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.UpdateTimeSlotRequest"
+                            "$ref": "#/definitions/dto.UpdateTimeSlotRequest"
                         }
                     }
                 ],
@@ -1091,7 +1160,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -1117,7 +1186,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -1125,7 +1194,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "github_com_gbschedule_gbschedule_internal_dto.CourseRequirement": {
+        "dto.CourseRequirement": {
             "type": "object",
             "required": [
                 "course_id",
@@ -1151,7 +1220,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_gbschedule_gbschedule_internal_dto.CreateClassRequest": {
+        "dto.CreateClassRequest": {
             "type": "object",
             "required": [
                 "name",
@@ -1172,7 +1241,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_gbschedule_gbschedule_internal_dto.CreateClassroomRequest": {
+        "dto.CreateClassroomRequest": {
             "type": "object",
             "required": [
                 "capacity",
@@ -1200,7 +1269,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_gbschedule_gbschedule_internal_dto.CreateCourseRequest": {
+        "dto.CreateCourseRequest": {
             "type": "object",
             "required": [
                 "code",
@@ -1226,7 +1295,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_gbschedule_gbschedule_internal_dto.CreateTeacherRequest": {
+        "dto.CreateTeacherRequest": {
             "type": "object",
             "required": [
                 "employee_no",
@@ -1259,7 +1328,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_gbschedule_gbschedule_internal_dto.CreateTimeSlotRequest": {
+        "dto.CreateTimeSlotRequest": {
             "type": "object",
             "required": [
                 "code",
@@ -1286,12 +1355,13 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_gbschedule_gbschedule_internal_dto.GenerateScheduleRequest": {
+        "dto.GenerateScheduleRequest": {
             "type": "object",
             "required": [
                 "courses",
                 "days_per_week",
                 "periods_per_day",
+                "semester",
                 "weeks"
             ],
             "properties": {
@@ -1311,7 +1381,7 @@ const docTemplate = `{
                     "type": "array",
                     "minItems": 1,
                     "items": {
-                        "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.CourseRequirement"
+                        "$ref": "#/definitions/dto.CourseRequirement"
                     }
                 },
                 "days_per_week": {
@@ -1341,7 +1411,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_gbschedule_gbschedule_internal_dto.MoveScheduleRequest": {
+        "dto.MoveScheduleRequest": {
             "type": "object",
             "required": [
                 "classroom_id",
@@ -1362,6 +1432,10 @@ const docTemplate = `{
                 "schedule_id": {
                     "type": "integer"
                 },
+                "semester": {
+                    "type": "string",
+                    "maxLength": 128
+                },
                 "time_slot_id": {
                     "type": "integer"
                 },
@@ -1371,7 +1445,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_gbschedule_gbschedule_internal_dto.Response": {
+        "dto.Response": {
             "type": "object",
             "properties": {
                 "code": {
@@ -1383,7 +1457,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_gbschedule_gbschedule_internal_dto.SwapScheduleRequest": {
+        "dto.SwapScheduleRequest": {
             "type": "object",
             "required": [
                 "schedule_a_id",
@@ -1398,7 +1472,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_gbschedule_gbschedule_internal_dto.UpdateClassRequest": {
+        "dto.UpdateClassRequest": {
             "type": "object",
             "properties": {
                 "grade": {
@@ -1415,7 +1489,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_gbschedule_gbschedule_internal_dto.UpdateClassroomRequest": {
+        "dto.UpdateClassroomRequest": {
             "type": "object",
             "properties": {
                 "capacity": {
@@ -1438,7 +1512,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_gbschedule_gbschedule_internal_dto.UpdateCourseRequest": {
+        "dto.UpdateCourseRequest": {
             "type": "object",
             "properties": {
                 "code": {
@@ -1459,7 +1533,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_gbschedule_gbschedule_internal_dto.UpdateTeacherRequest": {
+        "dto.UpdateTeacherRequest": {
             "type": "object",
             "properties": {
                 "contact": {
@@ -1488,7 +1562,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_gbschedule_gbschedule_internal_dto.UpdateTimeSlotRequest": {
+        "dto.UpdateTimeSlotRequest": {
             "type": "object",
             "properties": {
                 "code": {

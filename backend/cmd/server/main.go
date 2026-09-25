@@ -104,6 +104,7 @@ func migrate(db *gorm.DB) error {
 		&model.Class{},
 		&model.Course{},
 		&model.TimeSlot{},
+		&model.Semester{},
 		&model.Schedule{},
 		&model.AdjustmentLog{},
 	); err != nil {
@@ -119,6 +120,7 @@ func newApp(db *gorm.DB, logger *slog.Logger) (*gin.Engine, error) {
 	courseRepo := repository.NewCourseRepository(db)
 	timeSlotRepo := repository.NewTimeSlotRepository(db)
 	scheduleRepo := repository.NewScheduleRepository(db)
+	semesterRepo := repository.NewSemesterRepository(db)
 	adjustmentRepo := repository.NewAdjustmentLogRepository(db)
 
 	classroomService := service.NewClassroomService(classroomRepo, logger)
@@ -126,7 +128,7 @@ func newApp(db *gorm.DB, logger *slog.Logger) (*gin.Engine, error) {
 	classService := service.NewClassService(classRepo, logger)
 	courseService := service.NewCourseService(courseRepo, logger)
 	timeSlotService := service.NewTimeSlotService(timeSlotRepo, logger)
-	scheduleService := service.NewScheduleService(scheduleRepo, classroomRepo, teacherRepo, classRepo, courseRepo, timeSlotRepo, adjustmentRepo, logger)
+	scheduleService := service.NewScheduleService(scheduleRepo, semesterRepo, classroomRepo, teacherRepo, classRepo, courseRepo, timeSlotRepo, adjustmentRepo, logger)
 
 	h := router.Handlers{
 		Classroom:  handler.NewClassroomHandler(classroomService, logger),

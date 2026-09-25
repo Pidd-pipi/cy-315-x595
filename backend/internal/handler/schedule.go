@@ -25,7 +25,7 @@ func NewScheduleHandler(service service.ScheduleService, logger *slog.Logger) *S
 }
 
 // Generate godoc
-// @Summary Generate a timetable
+// @Summary Generate a timetable for a semester
 // @Tags schedules
 // @Accept json
 // @Produce json
@@ -50,6 +50,7 @@ func (h *ScheduleHandler) Generate(c *gin.Context) {
 // @Summary List timetable entries
 // @Tags schedules
 // @Produce json
+// @Param semester query string false "semester (defaults to the most recently generated semester)"
 // @Param week query int false "week"
 // @Param class_id query int false "class id"
 // @Param teacher_id query int false "teacher id"
@@ -57,12 +58,27 @@ func (h *ScheduleHandler) Generate(c *gin.Context) {
 // @Success 200 {object} dto.Response
 // @Router /api/v1/schedules [get]
 func (h *ScheduleHandler) List(c *gin.Context) {
-	week, classID, teacherID, classroomID, err := parseScheduleFilters(c)
+	semester, week, classID, teacherID, classroomID, err := parseScheduleFilters(c)
 	if err != nil {
 		BadRequest(c, err.Error())
 		return
 	}
-	items, err := h.service.List(c.Request.Context(), week, classID, teacherID, classroomID)
+	items, err := h.service.List(c.Request.Context(), semester, week, classID, teacherID, classroomID)
+	if err != nil {
+		Error(c, err)
+		return
+	}
+	OK(c, items)
+}
+
+// Semesters godoc
+// @Summary List semesters that have timetable entries
+// @Tags schedules
+// @Produce json
+// @Success 200 {object} dto.Response
+// @Router /api/v1/schedules/semesters [get]
+func (h *ScheduleHandler) Semesters(c *gin.Context) {
+	items, err := h.service.ListSemesters(c.Request.Context())
 	if err != nil {
 		Error(c, err)
 		return
@@ -91,13 +107,15 @@ func (h *ScheduleHandler) Get(c *gin.Context) {
 }
 
 // Conflicts godoc
-// @Summary Detect conflicts in the current timetable
+// @Summary Detect conflicts in a semester timetable
 // @Tags schedules
 // @Produce json
+// @Param semester query string false "semester (defaults to the most recently generated semester)"
 // @Success 200 {object} dto.Response
 // @Router /api/v1/schedules/conflicts [get]
 func (h *ScheduleHandler) Conflicts(c *gin.Context) {
-	items, err := h.service.CheckConflicts(c.Request.Context())
+	semester := optionalSemester(c)
+	items, err := h.service.CheckConflicts(c.Request.Context(), semester)
 	if err != nil {
 		Error(c, err)
 		return
@@ -128,7 +146,7 @@ func (h *ScheduleHandler) Swap(c *gin.Context) {
 }
 
 // Move godoc
-// @Summary Move a timetable entry to a free slot
+// @Summary Move a timetable entry to a free slot within the same semester
 // @Tags schedules
 // @Accept json
 // @Produce json
@@ -153,6 +171,7 @@ func (h *ScheduleHandler) Move(c *gin.Context) {
 // @Summary List adjustment history
 // @Tags schedules
 // @Produce json
+// @Param semester query string false "semester (defaults to the most recently generated semester)"
 // @Param page query int false "page"
 // @Param page_size query int false "page size"
 // @Success 200 {object} dto.Response
@@ -164,7 +183,8 @@ func (h *ScheduleHandler) Adjustments(c *gin.Context) {
 		return
 	}
 	p.Normalize()
-	items, total, err := h.service.ListAdjustments(c.Request.Context(), p.Page, p.PageSize)
+	semester := optionalSemester(c)
+	items, total, err := h.service.ListAdjustments(c.Request.Context(), semester, p.Page, p.PageSize)
 	if err != nil {
 		Error(c, err)
 		return
@@ -173,11 +193,12 @@ func (h *ScheduleHandler) Adjustments(c *gin.Context) {
 }
 
 // Export godoc
-// @Summary Export a timetable as JSON or CSV
+// @Summary Export a semester timetable as JSON or CSV
 // @Tags schedules
 // @Produce json
 // @Param type query string true "class|teacher|classroom"
 // @Param id query int true "entity id"
+// @Param semester query string false "semester (defaults to the most recently generated semester)"
 // @Param week query int false "week"
 // @Param format query string false "json|csv"
 // @Success 200 {object} dto.Response
@@ -194,6 +215,7 @@ func (h *ScheduleHandler) Export(c *gin.Context) {
 		w := exportReq.Week
 		week = &w
 	}
+	semester := &exportReq.Semester
 	var classID, teacherID, classroomID *uint
 	switch exportReq.Type {
 	case "class":
@@ -206,7 +228,7 @@ func (h *ScheduleHandler) Export(c *gin.Context) {
 		id := exportReq.ID
 		classroomID = &id
 	}
-	items, err := h.service.List(c.Request.Context(), week, classID, teacherID, classroomID)
+	items, err := h.service.List(c.Request.Context(), semester, week, classID, teacherID, classroomID)
 	if err != nil {
 		Error(c, err)
 		return
@@ -218,12 +240,24 @@ func (h *ScheduleHandler) Export(c *gin.Context) {
 	OK(c, items)
 }
 
-func parseScheduleFilters(c *gin.Context) (*uint, *uint, *uint, *uint, error) {
+// optionalSemester parses the optional "semester" query parameter. An empty or
+// absent parameter yields nil, which makes the service fall back to the most
+// recently generated semester.
+func optionalSemester(c *gin.Context) *string {
+	if v := c.Query("semester"); v != "" {
+		semester := v
+		return &semester
+	}
+	return nil
+}
+
+func parseScheduleFilters(c *gin.Context) (*string, *uint, *uint, *uint, *uint, error) {
+	semester := optionalSemester(c)
 	var week, classID, teacherID, classroomID *uint
 	if v := c.Query("week"); v != "" {
 		n, err := strconv.ParseUint(v, 10, 64)
 		if err != nil || n == 0 {
-			return nil, nil, nil, nil, service.ErrInvalid
+			return nil, nil, nil, nil, nil, service.ErrInvalid
 		}
 		x := uint(n)
 		week = &x
@@ -231,7 +265,7 @@ func parseScheduleFilters(c *gin.Context) (*uint, *uint, *uint, *uint, error) {
 	if v := c.Query("class_id"); v != "" {
 		n, err := strconv.ParseUint(v, 10, 64)
 		if err != nil || n == 0 {
-			return nil, nil, nil, nil, service.ErrInvalid
+			return nil, nil, nil, nil, nil, service.ErrInvalid
 		}
 		x := uint(n)
 		classID = &x
@@ -239,7 +273,7 @@ func parseScheduleFilters(c *gin.Context) (*uint, *uint, *uint, *uint, error) {
 	if v := c.Query("teacher_id"); v != "" {
 		n, err := strconv.ParseUint(v, 10, 64)
 		if err != nil || n == 0 {
-			return nil, nil, nil, nil, service.ErrInvalid
+			return nil, nil, nil, nil, nil, service.ErrInvalid
 		}
 		x := uint(n)
 		teacherID = &x
@@ -247,21 +281,22 @@ func parseScheduleFilters(c *gin.Context) (*uint, *uint, *uint, *uint, error) {
 	if v := c.Query("classroom_id"); v != "" {
 		n, err := strconv.ParseUint(v, 10, 64)
 		if err != nil || n == 0 {
-			return nil, nil, nil, nil, service.ErrInvalid
+			return nil, nil, nil, nil, nil, service.ErrInvalid
 		}
 		x := uint(n)
 		classroomID = &x
 	}
-	return week, classID, teacherID, classroomID, nil
+	return semester, week, classID, teacherID, classroomID, nil
 }
 
 func writeScheduleCSV(c *gin.Context, items []dto.ScheduleResponse) {
 	var buf bytes.Buffer
 	w := csv.NewWriter(&buf)
-	_ = w.Write([]string{"id", "week", "day_of_week", "time_slot_code", "start_time", "end_time", "classroom_name", "teacher_name", "class_name", "course_name"})
+	_ = w.Write([]string{"id", "semester", "week", "day_of_week", "time_slot_code", "start_time", "end_time", "classroom_name", "teacher_name", "class_name", "course_name"})
 	for _, item := range items {
 		_ = w.Write([]string{
 			strconv.FormatUint(uint64(item.ID), 10),
+			item.Semester,
 			strconv.FormatUint(uint64(item.Week), 10),
 			strconv.Itoa(item.DayOfWeek),
 			item.TimeSlotCode,

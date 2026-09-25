@@ -56,11 +56,22 @@ CREATE TABLE IF NOT EXISTS time_slots (
     end_time TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS semesters (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at DATETIME,
+    updated_at DATETIME,
+    deleted_at DATETIME,
+    name TEXT NOT NULL UNIQUE,
+    last_generated_at DATETIME
+);
+CREATE INDEX IF NOT EXISTS idx_semesters_last_generated ON semesters(last_generated_at);
+
 CREATE TABLE IF NOT EXISTS schedules (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     created_at DATETIME,
     updated_at DATETIME,
     deleted_at DATETIME,
+    semester TEXT NOT NULL DEFAULT '',
     week INTEGER NOT NULL,
     day_of_week INTEGER NOT NULL,
     time_slot_id INTEGER NOT NULL,
@@ -69,6 +80,7 @@ CREATE TABLE IF NOT EXISTS schedules (
     class_id INTEGER NOT NULL,
     course_id INTEGER NOT NULL
 );
+CREATE INDEX IF NOT EXISTS idx_schedules_semester ON schedules(semester);
 CREATE INDEX IF NOT EXISTS idx_schedules_week ON schedules(week);
 CREATE INDEX IF NOT EXISTS idx_schedules_day ON schedules(day_of_week);
 CREATE INDEX IF NOT EXISTS idx_schedules_time_slot ON schedules(time_slot_id);
@@ -82,8 +94,10 @@ CREATE TABLE IF NOT EXISTS adjustment_logs (
     created_at DATETIME,
     updated_at DATETIME,
     deleted_at DATETIME,
+    semester TEXT NOT NULL DEFAULT '',
     schedule_id INTEGER,
     action TEXT NOT NULL,
     detail TEXT
 );
+CREATE INDEX IF NOT EXISTS idx_adjustment_logs_semester ON adjustment_logs(semester);
 CREATE INDEX IF NOT EXISTS idx_adjustment_logs_schedule ON adjustment_logs(schedule_id);

@@ -10,6 +10,7 @@ import (
 
 // ScheduleFilter contains optional query filters for timetable entries.
 type ScheduleFilter struct {
+	Semester    *string
 	Week        *uint
 	ClassID     *uint
 	TeacherID   *uint
@@ -23,8 +24,10 @@ type ScheduleRepository interface {
 	List(ctx context.Context, filter ScheduleFilter) ([]model.Schedule, error)
 	Update(ctx context.Context, schedule *model.Schedule) error
 	DeleteByID(ctx context.Context, id uint) error
-	DeleteByWeeks(ctx context.Context, weeks []uint) error
-	DeleteAll(ctx context.Context) error
+	DeleteBySemester(ctx context.Context, semester string) error
+	// ReplaceBySemester atomically clears all entries of a semester and
+	// inserts the new timetable for that semester.
+	ReplaceBySemester(ctx context.Context, semester string, schedules []model.Schedule) error
 }
 
 type scheduleRepository struct {
@@ -56,6 +59,9 @@ func (r *scheduleRepository) GetByID(ctx context.Context, id uint) (*model.Sched
 
 func (r *scheduleRepository) List(ctx context.Context, filter ScheduleFilter) ([]model.Schedule, error) {
 	query := r.db.WithContext(ctx).Model(&model.Schedule{})
+	if filter.Semester != nil {
+		query = query.Where("semester = ?", *filter.Semester)
+	}
 	if filter.Week != nil {
 		query = query.Where("week = ?", *filter.Week)
 	}
@@ -89,19 +95,25 @@ func (r *scheduleRepository) DeleteByID(ctx context.Context, id uint) error {
 	return nil
 }
 
-func (r *scheduleRepository) DeleteByWeeks(ctx context.Context, weeks []uint) error {
-	if len(weeks) == 0 {
-		return nil
-	}
-	if err := r.db.WithContext(ctx).Where("week IN ?", weeks).Delete(&model.Schedule{}).Error; err != nil {
-		return fmt.Errorf("delete schedules by weeks: %w", err)
+// DeleteBySemester removes every timetable entry of one semester; entries of
+// other semesters are left untouched.
+func (r *scheduleRepository) DeleteBySemester(ctx context.Context, semester string) error {
+	if err := r.db.WithContext(ctx).Where("semester = ?", semester).Delete(&model.Schedule{}).Error; err != nil {
+		return fmt.Errorf("delete schedules by semester: %w", err)
 	}
 	return nil
 }
 
-func (r *scheduleRepository) DeleteAll(ctx context.Context) error {
-	if err := r.db.WithContext(ctx).Where("1 = 1").Delete(&model.Schedule{}).Error; err != nil {
-		return fmt.Errorf("delete all schedules: %w", err)
-	}
-	return nil
+func (r *scheduleRepository) ReplaceBySemester(ctx context.Context, semester string, schedules []model.Schedule) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("semester = ?", semester).Delete(&model.Schedule{}).Error; err != nil {
+			return fmt.Errorf("delete schedules by semester: %w", err)
+		}
+		if len(schedules) > 0 {
+			if err := tx.CreateInBatches(schedules, 200).Error; err != nil {
+				return fmt.Errorf("create schedules: %w", err)
+			}
+		}
+		return nil
+	})
 }
