@@ -6,6 +6,7 @@ type ConflictResponse struct {
 	EntityType string `json:"entity_type"`
 	EntityID   uint   `json:"entity_id"`
 	EntityName string `json:"entity_name"`
+	Semester   string `json:"semester"`
 	Week       uint   `json:"week"`
 	DayOfWeek  int    `json:"day_of_week"`
 	TimeSlotID uint   `json:"time_slot_id"`

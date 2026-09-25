@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -38,6 +39,7 @@ func (h *ScheduleHandler) Generate(c *gin.Context) {
 		BadRequest(c, err.Error())
 		return
 	}
+	req.Semester = strings.TrimSpace(req.Semester)
 	result, err := h.service.Generate(c.Request.Context(), &req)
 	if err != nil {
 		Error(c, err)
@@ -51,18 +53,19 @@ func (h *ScheduleHandler) Generate(c *gin.Context) {
 // @Tags schedules
 // @Produce json
 // @Param week query int false "week"
+// @Param semester query string false "semester; defaults to the latest generated semester"
 // @Param class_id query int false "class id"
 // @Param teacher_id query int false "teacher id"
 // @Param classroom_id query int false "classroom id"
 // @Success 200 {object} dto.Response
 // @Router /api/v1/schedules [get]
 func (h *ScheduleHandler) List(c *gin.Context) {
-	week, classID, teacherID, classroomID, err := parseScheduleFilters(c)
+	semester, week, classID, teacherID, classroomID, err := parseScheduleFilters(c)
 	if err != nil {
 		BadRequest(c, err.Error())
 		return
 	}
-	items, err := h.service.List(c.Request.Context(), week, classID, teacherID, classroomID)
+	items, err := h.service.List(c.Request.Context(), semester, week, classID, teacherID, classroomID)
 	if err != nil {
 		Error(c, err)
 		return
@@ -94,10 +97,11 @@ func (h *ScheduleHandler) Get(c *gin.Context) {
 // @Summary Detect conflicts in the current timetable
 // @Tags schedules
 // @Produce json
+// @Param semester query string false "semester; defaults to the latest generated semester"
 // @Success 200 {object} dto.Response
 // @Router /api/v1/schedules/conflicts [get]
 func (h *ScheduleHandler) Conflicts(c *gin.Context) {
-	items, err := h.service.CheckConflicts(c.Request.Context())
+	items, err := h.service.CheckConflicts(c.Request.Context(), strings.TrimSpace(c.Query("semester")))
 	if err != nil {
 		Error(c, err)
 		return
@@ -119,6 +123,7 @@ func (h *ScheduleHandler) Swap(c *gin.Context) {
 		BadRequest(c, err.Error())
 		return
 	}
+	req.Semester = strings.TrimSpace(req.Semester)
 	result, err := h.service.Swap(c.Request.Context(), &req)
 	if err != nil {
 		Error(c, err)
@@ -141,6 +146,7 @@ func (h *ScheduleHandler) Move(c *gin.Context) {
 		BadRequest(c, err.Error())
 		return
 	}
+	req.Semester = strings.TrimSpace(req.Semester)
 	result, err := h.service.Move(c.Request.Context(), &req)
 	if err != nil {
 		Error(c, err)
@@ -155,6 +161,7 @@ func (h *ScheduleHandler) Move(c *gin.Context) {
 // @Produce json
 // @Param page query int false "page"
 // @Param page_size query int false "page size"
+// @Param semester query string false "semester; defaults to the latest generated semester"
 // @Success 200 {object} dto.Response
 // @Router /api/v1/schedules/adjustments [get]
 func (h *ScheduleHandler) Adjustments(c *gin.Context) {
@@ -164,7 +171,8 @@ func (h *ScheduleHandler) Adjustments(c *gin.Context) {
 		return
 	}
 	p.Normalize()
-	items, total, err := h.service.ListAdjustments(c.Request.Context(), p.Page, p.PageSize)
+	semester := strings.TrimSpace(c.Query("semester"))
+	items, total, err := h.service.ListAdjustments(c.Request.Context(), semester, p.Page, p.PageSize)
 	if err != nil {
 		Error(c, err)
 		return
@@ -176,6 +184,7 @@ func (h *ScheduleHandler) Adjustments(c *gin.Context) {
 // @Summary Export a timetable as JSON or CSV
 // @Tags schedules
 // @Produce json
+// @Param semester query string false "semester; defaults to the latest generated semester"
 // @Param type query string true "class|teacher|classroom"
 // @Param id query int true "entity id"
 // @Param week query int false "week"
@@ -206,7 +215,7 @@ func (h *ScheduleHandler) Export(c *gin.Context) {
 		id := exportReq.ID
 		classroomID = &id
 	}
-	items, err := h.service.List(c.Request.Context(), week, classID, teacherID, classroomID)
+	items, err := h.service.List(c.Request.Context(), exportReq.Semester, week, classID, teacherID, classroomID)
 	if err != nil {
 		Error(c, err)
 		return
@@ -218,12 +227,13 @@ func (h *ScheduleHandler) Export(c *gin.Context) {
 	OK(c, items)
 }
 
-func parseScheduleFilters(c *gin.Context) (*uint, *uint, *uint, *uint, error) {
+func parseScheduleFilters(c *gin.Context) (string, *uint, *uint, *uint, *uint, error) {
+	semester := strings.TrimSpace(c.Query("semester"))
 	var week, classID, teacherID, classroomID *uint
 	if v := c.Query("week"); v != "" {
 		n, err := strconv.ParseUint(v, 10, 64)
 		if err != nil || n == 0 {
-			return nil, nil, nil, nil, service.ErrInvalid
+			return "", nil, nil, nil, nil, service.ErrInvalid
 		}
 		x := uint(n)
 		week = &x
@@ -231,7 +241,7 @@ func parseScheduleFilters(c *gin.Context) (*uint, *uint, *uint, *uint, error) {
 	if v := c.Query("class_id"); v != "" {
 		n, err := strconv.ParseUint(v, 10, 64)
 		if err != nil || n == 0 {
-			return nil, nil, nil, nil, service.ErrInvalid
+			return "", nil, nil, nil, nil, service.ErrInvalid
 		}
 		x := uint(n)
 		classID = &x
@@ -239,7 +249,7 @@ func parseScheduleFilters(c *gin.Context) (*uint, *uint, *uint, *uint, error) {
 	if v := c.Query("teacher_id"); v != "" {
 		n, err := strconv.ParseUint(v, 10, 64)
 		if err != nil || n == 0 {
-			return nil, nil, nil, nil, service.ErrInvalid
+			return "", nil, nil, nil, nil, service.ErrInvalid
 		}
 		x := uint(n)
 		teacherID = &x
@@ -247,21 +257,22 @@ func parseScheduleFilters(c *gin.Context) (*uint, *uint, *uint, *uint, error) {
 	if v := c.Query("classroom_id"); v != "" {
 		n, err := strconv.ParseUint(v, 10, 64)
 		if err != nil || n == 0 {
-			return nil, nil, nil, nil, service.ErrInvalid
+			return "", nil, nil, nil, nil, service.ErrInvalid
 		}
 		x := uint(n)
 		classroomID = &x
 	}
-	return week, classID, teacherID, classroomID, nil
+	return semester, week, classID, teacherID, classroomID, nil
 }
 
 func writeScheduleCSV(c *gin.Context, items []dto.ScheduleResponse) {
 	var buf bytes.Buffer
 	w := csv.NewWriter(&buf)
-	_ = w.Write([]string{"id", "week", "day_of_week", "time_slot_code", "start_time", "end_time", "classroom_name", "teacher_name", "class_name", "course_name"})
+	_ = w.Write([]string{"id", "semester", "week", "day_of_week", "time_slot_code", "start_time", "end_time", "classroom_name", "teacher_name", "class_name", "course_name"})
 	for _, item := range items {
 		_ = w.Write([]string{
 			strconv.FormatUint(uint64(item.ID), 10),
+			item.Semester,
 			strconv.FormatUint(uint64(item.Week), 10),
 			strconv.Itoa(item.DayOfWeek),
 			item.TimeSlotCode,

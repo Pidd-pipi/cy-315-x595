@@ -163,6 +163,9 @@ definitions:
         maximum: 7
         minimum: 1
         type: integer
+      semester:
+        maxLength: 128
+        type: string
       schedule_id:
         type: integer
       time_slot_id:
@@ -191,6 +194,9 @@ definitions:
         type: integer
       schedule_b_id:
         type: integer
+      semester:
+        maxLength: 128
+        type: string
     required:
     - schedule_a_id
     - schedule_b_id
@@ -589,6 +595,10 @@ paths:
         in: query
         name: week
         type: integer
+      - description: semester; defaults to the latest generated semester
+        in: query
+        name: semester
+        type: string
       - description: class id
         in: query
         name: class_id
@@ -640,6 +650,10 @@ paths:
         in: query
         name: page_size
         type: integer
+      - description: semester; defaults to the latest generated semester
+        in: query
+        name: semester
+        type: string
       produces:
       - application/json
       responses:
@@ -652,6 +666,11 @@ paths:
       - schedules
   /api/v1/schedules/conflicts:
     get:
+      parameters:
+      - description: semester; defaults to the latest generated semester
+        in: query
+        name: semester
+        type: string
       produces:
       - application/json
       responses:
@@ -665,6 +684,10 @@ paths:
   /api/v1/schedules/export:
     get:
       parameters:
+      - description: semester; defaults to the latest generated semester
+        in: query
+        name: semester
+        type: string
       - description: class|teacher|classroom
         in: query
         name: type

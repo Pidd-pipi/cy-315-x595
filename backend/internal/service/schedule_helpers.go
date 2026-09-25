@@ -377,6 +377,7 @@ func enrichSchedules(items []model.Schedule, slots map[uint]model.TimeSlot, clas
 		course := courses[item.CourseID]
 		out = append(out, dto.ScheduleResponse{
 			ID:            item.ID,
+			Semester:      item.Semester,
 			Week:          item.Week,
 			DayOfWeek:     item.DayOfWeek,
 			TimeSlotID:    item.TimeSlotID,

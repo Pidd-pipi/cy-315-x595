@@ -28,9 +28,9 @@ func Error(c *gin.Context, err error) {
 	case errors.Is(err, service.ErrNotFound):
 		c.JSON(http.StatusNotFound, dto.Response{Code: constants.CodeNotFound, Message: constants.MsgNotFound, Data: nil})
 	case errors.Is(err, service.ErrInvalid):
-		c.JSON(http.StatusBadRequest, dto.Response{Code: constants.CodeBadRequest, Message: constants.MsgBadRequest, Data: nil})
+		BadRequest(c, err.Error())
 	case errors.Is(err, service.ErrConflict):
-		c.JSON(http.StatusConflict, dto.Response{Code: constants.CodeConflict, Message: constants.MsgConflict, Data: nil})
+		c.JSON(http.StatusConflict, dto.Response{Code: constants.CodeConflict, Message: err.Error(), Data: nil})
 	default:
 		c.JSON(http.StatusInternalServerError, dto.Response{Code: constants.CodeInternal, Message: constants.MsgInternal, Data: nil})
 	}

@@ -7,8 +7,8 @@
 - **基础数据管理**：教室、教师、班级、课程、时间段的完整 CRUD API。
 - **智能排课算法**：根据学期周数、每周天数、每天节数和课程周课时要求生成课表，避开教师/班级/教室时间冲突，优先满足连排需求。
 - **冲突检测与报告**：检测教师时间冲突、班级时间冲突、教室时间冲突、教室容量冲突和教师偏好冲突，并给出解决建议。
-- **课表查询与导出**：按班级、教师、教室查询课表，支持 JSON / CSV 导出，支持按周次查看。
-- **调课与手动调整**：支持交换两节课、移动单节课到空闲时段，自动重新检测冲突并记录调课历史。
+- **课表查询与导出**：按学期、班级、教师、教室查询课表，支持 JSON / CSV 导出，支持按周次查看；未指定学期时默认返回最近一次生成的学期。
+- **调课与手动调整**：在同一学期内支持交换两节课、移动单节课到空闲时段，自动重新检测该学期冲突并记录按学期隔离的调课历史。
 - **统计与利用率分析**：教室利用率、教师工作量、课程分布热力图数据。
 
 ## API 文档
@@ -57,13 +57,13 @@ go run ./cmd/server
 | GET/PUT/DELETE | `/api/v1/courses/:id` | 课程详情 / 更新 / 删除 |
 | GET/POST | `/api/v1/time-slots` | 时间段列表 / 新建时间段 |
 | GET/PUT/DELETE | `/api/v1/time-slots/:id` | 时间段详情 / 更新 / 删除 |
-| POST | `/api/v1/schedules/generate` | 智能排课 |
-| GET | `/api/v1/schedules` | 课表查询 |
-| GET | `/api/v1/schedules/conflicts` | 冲突检测 |
-| POST | `/api/v1/schedules/swap` | 交换两节课 |
-| POST | `/api/v1/schedules/move` | 移动单节课 |
-| GET | `/api/v1/schedules/adjustments` | 调课历史 |
-| GET | `/api/v1/schedules/export` | 课表导出（JSON/CSV） |
+| POST | `/api/v1/schedules/generate` | 按学期智能排课（替换同一学期课表） |
+| GET | `/api/v1/schedules` | 课表查询（可传 `semester`） |
+| GET | `/api/v1/schedules/conflicts` | 指定学期冲突检测 |
+| POST | `/api/v1/schedules/swap` | 同一学期交换两节课 |
+| POST | `/api/v1/schedules/move` | 同一学期移动单节课 |
+| GET | `/api/v1/schedules/adjustments` | 指定学期调课历史 |
+| GET | `/api/v1/schedules/export` | 指定学期课表导出（JSON/CSV） |
 | GET | `/api/v1/statistics/classrooms` | 教室利用率 |
 | GET | `/api/v1/statistics/teachers` | 教师工作量 |
 | GET | `/api/v1/statistics/density` | 课程分布热力图 |

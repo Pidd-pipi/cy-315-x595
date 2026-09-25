@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sort"
+	"strings"
 
 	"github.com/gbschedule/gbschedule/internal/constants"
 	"github.com/gbschedule/gbschedule/internal/dto"
@@ -17,12 +18,12 @@ import (
 // ScheduleService exposes scheduling, conflict detection, adjustment and statistics operations.
 type ScheduleService interface {
 	Generate(ctx context.Context, req *dto.GenerateScheduleRequest) (*dto.GenerateScheduleResponse, error)
-	List(ctx context.Context, week, classID, teacherID, classroomID *uint) ([]dto.ScheduleResponse, error)
+	List(ctx context.Context, semester string, week, classID, teacherID, classroomID *uint) ([]dto.ScheduleResponse, error)
 	Get(ctx context.Context, id uint) (*dto.ScheduleResponse, error)
-	CheckConflicts(ctx context.Context) ([]dto.ConflictResponse, error)
+	CheckConflicts(ctx context.Context, semester string) ([]dto.ConflictResponse, error)
 	Swap(ctx context.Context, req *dto.SwapScheduleRequest) (*dto.AdjustmentResponse, error)
 	Move(ctx context.Context, req *dto.MoveScheduleRequest) (*dto.AdjustmentResponse, error)
-	ListAdjustments(ctx context.Context, page, pageSize int) ([]dto.AdjustmentLogResponse, int64, error)
+	ListAdjustments(ctx context.Context, semester string, page, pageSize int) ([]dto.AdjustmentLogResponse, int64, error)
 	ClassroomUtilization(ctx context.Context) ([]dto.ClassroomUtilizationItem, error)
 	TeacherWorkload(ctx context.Context) ([]dto.TeacherWorkloadItem, error)
 	CourseDensity(ctx context.Context) ([]dto.CourseDensityItem, error)
@@ -64,6 +65,12 @@ func NewScheduleService(
 
 // Generate creates a timetable with a greedy scheduling algorithm.
 func (s *scheduleService) Generate(ctx context.Context, req *dto.GenerateScheduleRequest) (*dto.GenerateScheduleResponse, error) {
+	semester := strings.TrimSpace(req.Semester)
+	if semester == "" {
+		return nil, fmt.Errorf("学期名称不能为空: %w", ErrInvalid)
+	}
+	req.Semester = semester
+
 	allSlots, _, err := s.timeSlots.List(ctx, 1, constants.MaxPageSize)
 	if err != nil {
 		return nil, fmt.Errorf("load time slots: %w", err)
@@ -113,7 +120,7 @@ func (s *scheduleService) Generate(ctx context.Context, req *dto.GenerateSchedul
 				if !ok {
 					conflicts = append(conflicts, dto.ConflictResponse{
 						Type: constants.ConflictTeacherTime, EntityType: "course", EntityID: requirement.CourseID,
-						EntityName: fmt.Sprintf("course %d", requirement.CourseID), Week: uint(week),
+						EntityName: fmt.Sprintf("course %d", requirement.CourseID), Week: uint(week), Semester: semester,
 						Suggestion: "course not found",
 					})
 					continue
@@ -121,13 +128,14 @@ func (s *scheduleService) Generate(ctx context.Context, req *dto.GenerateSchedul
 				required += requirement.WeeklyPeriods
 
 				positions := buildCandidatePositions(req.DaysPerWeek, slots, requirement.Consecutive, requirement.WeeklyPeriods)
-				chosen, classrooms, ok := placeGreedy(uint(week), positions, requirement.WeeklyPeriods, occ, class, *teacher, course, classrooms, slots)
+				chosen, chosenClassrooms, ok := placeGreedy(uint(week), positions, requirement.WeeklyPeriods, occ, class, *teacher, course, classrooms, slots)
 				if !ok {
 					conflicts = append(conflicts, dto.ConflictResponse{
 						Type:       constants.ConflictTeacherTime,
 						EntityType: "course",
 						EntityID:   requirement.CourseID,
 						EntityName: course.Name,
+						Semester:   semester,
 						Week:       uint(week),
 						Suggestion: fmt.Sprintf("unable to place %d periods for course %s in week %d; add teachers/classrooms or relax constraints", requirement.WeeklyPeriods, course.Name, week),
 					})
@@ -135,10 +143,11 @@ func (s *scheduleService) Generate(ctx context.Context, req *dto.GenerateSchedul
 				}
 				for i := range chosen {
 					allSchedules = append(allSchedules, model.Schedule{
+						Semester:    semester,
 						Week:        uint(week),
 						DayOfWeek:   chosen[i].Day,
 						TimeSlotID:  chosen[i].Slot.ID,
-						ClassroomID: classrooms[i].ID,
+						ClassroomID: chosenClassrooms[i].ID,
 						TeacherID:   teacher.ID,
 						ClassID:     class.ID,
 						CourseID:    course.ID,
@@ -148,16 +157,13 @@ func (s *scheduleService) Generate(ctx context.Context, req *dto.GenerateSchedul
 		}
 	}
 
-	// Regenerate the full timetable for the requested semester so stale
-	// weeks from a previous longer run are not left behind.
-	if err := s.schedules.DeleteAll(ctx); err != nil {
-		return nil, fmt.Errorf("clear old schedules: %w", err)
-	}
-	if err := s.schedules.CreateBatch(ctx, allSchedules); err != nil {
-		return nil, fmt.Errorf("persist schedules: %w", err)
+	// Replace only the requested semester. Other semesters remain available
+	// for historical timetable lookup.
+	if err := s.schedules.ReplaceSemester(ctx, semester, allSchedules); err != nil {
+		return nil, fmt.Errorf("replace semester schedules: %w", err)
 	}
 
-	generatedConflicts, err := s.CheckConflicts(ctx)
+	generatedConflicts, err := s.CheckConflicts(ctx, semester)
 	if err != nil {
 		return nil, fmt.Errorf("check generated conflicts: %w", err)
 	}
@@ -167,6 +173,7 @@ func (s *scheduleService) Generate(ctx context.Context, req *dto.GenerateSchedul
 		return nil, fmt.Errorf("enrich schedules: %w", err)
 	}
 	resp := &dto.GenerateScheduleResponse{
+		Semester:  semester,
 		Schedules: responses,
 		Conflicts: append(conflicts, generatedConflicts...),
 		Generated: len(allSchedules),
@@ -175,8 +182,15 @@ func (s *scheduleService) Generate(ctx context.Context, req *dto.GenerateSchedul
 	return resp, nil
 }
 
-func (s *scheduleService) List(ctx context.Context, week, classID, teacherID, classroomID *uint) ([]dto.ScheduleResponse, error) {
-	filter := repository.ScheduleFilter{Week: week, ClassID: classID, TeacherID: teacherID, ClassroomID: classroomID}
+func (s *scheduleService) List(ctx context.Context, semester string, week, classID, teacherID, classroomID *uint) ([]dto.ScheduleResponse, error) {
+	semester, err := s.resolveSemester(ctx, semester)
+	if err != nil {
+		return nil, err
+	}
+	if semester == "" {
+		return []dto.ScheduleResponse{}, nil
+	}
+	filter := repository.ScheduleFilter{Semester: semester, Week: week, ClassID: classID, TeacherID: teacherID, ClassroomID: classroomID}
 	items, err := s.schedules.List(ctx, filter)
 	if err != nil {
 		return nil, fmt.Errorf("list schedules: %w", err)
@@ -202,8 +216,15 @@ func (s *scheduleService) Get(ctx context.Context, id uint) (*dto.ScheduleRespon
 	return &responses[0], nil
 }
 
-func (s *scheduleService) CheckConflicts(ctx context.Context) ([]dto.ConflictResponse, error) {
-	items, err := s.schedules.List(ctx, repository.ScheduleFilter{})
+func (s *scheduleService) CheckConflicts(ctx context.Context, semester string) ([]dto.ConflictResponse, error) {
+	semester, err := s.resolveSemester(ctx, semester)
+	if err != nil {
+		return nil, err
+	}
+	if semester == "" {
+		return []dto.ConflictResponse{}, nil
+	}
+	items, err := s.schedules.List(ctx, repository.ScheduleFilter{Semester: semester})
 	if err != nil {
 		return nil, fmt.Errorf("list schedules for conflict check: %w", err)
 	}
@@ -211,6 +232,13 @@ func (s *scheduleService) CheckConflicts(ctx context.Context) ([]dto.ConflictRes
 }
 
 func (s *scheduleService) Swap(ctx context.Context, req *dto.SwapScheduleRequest) (*dto.AdjustmentResponse, error) {
+	semester, err := s.resolveSemester(ctx, req.Semester)
+	if err != nil {
+		return nil, err
+	}
+	if semester == "" {
+		return nil, fmt.Errorf("未找到可用学期，请先生成课表: %w", ErrInvalid)
+	}
 	a, err := s.schedules.GetByID(ctx, req.ScheduleAID)
 	if err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
@@ -225,17 +253,18 @@ func (s *scheduleService) Swap(ctx context.Context, req *dto.SwapScheduleRequest
 		}
 		return nil, fmt.Errorf("get schedule b: %w", err)
 	}
+	if a.Semester != semester || b.Semester != semester || a.Semester != b.Semester {
+		return nil, fmt.Errorf("调课只能在同一学期内进行，不能跨学期交换课次: %w", ErrInvalid)
+	}
+
 	a.Week, b.Week = b.Week, a.Week
 	a.DayOfWeek, b.DayOfWeek = b.DayOfWeek, a.DayOfWeek
 	a.TimeSlotID, b.TimeSlotID = b.TimeSlotID, a.TimeSlotID
 	a.ClassroomID, b.ClassroomID = b.ClassroomID, a.ClassroomID
-	if err := s.schedules.Update(ctx, a); err != nil {
-		return nil, fmt.Errorf("update schedule a: %w", err)
+	if err := s.schedules.UpdateBatch(ctx, []model.Schedule{*a, *b}); err != nil {
+		return nil, fmt.Errorf("update schedules: %w", err)
 	}
-	if err := s.schedules.Update(ctx, b); err != nil {
-		return nil, fmt.Errorf("update schedule b: %w", err)
-	}
-	logID, err := s.recordAdjustment(ctx, req.ScheduleAID, constants.ActionSwap, map[string]any{"schedule_a_id": req.ScheduleAID, "schedule_b_id": req.ScheduleBID})
+	logID, err := s.recordAdjustment(ctx, semester, req.ScheduleAID, constants.ActionSwap, map[string]any{"semester": semester, "schedule_a_id": req.ScheduleAID, "schedule_b_id": req.ScheduleBID})
 	if err != nil {
 		return nil, err
 	}
@@ -243,7 +272,7 @@ func (s *scheduleService) Swap(ctx context.Context, req *dto.SwapScheduleRequest
 	if err != nil {
 		return nil, err
 	}
-	conflicts, err := s.CheckConflicts(ctx)
+	conflicts, err := s.CheckConflicts(ctx, semester)
 	if err != nil {
 		return nil, err
 	}
@@ -251,6 +280,13 @@ func (s *scheduleService) Swap(ctx context.Context, req *dto.SwapScheduleRequest
 }
 
 func (s *scheduleService) Move(ctx context.Context, req *dto.MoveScheduleRequest) (*dto.AdjustmentResponse, error) {
+	semester, err := s.resolveSemester(ctx, req.Semester)
+	if err != nil {
+		return nil, err
+	}
+	if semester == "" {
+		return nil, fmt.Errorf("未找到可用学期，请先生成课表: %w", ErrInvalid)
+	}
 	item, err := s.schedules.GetByID(ctx, req.ScheduleID)
 	if err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
@@ -258,6 +294,10 @@ func (s *scheduleService) Move(ctx context.Context, req *dto.MoveScheduleRequest
 		}
 		return nil, fmt.Errorf("get schedule: %w", err)
 	}
+	if item.Semester != semester {
+		return nil, fmt.Errorf("不能把课次从学期 %q 调整到学期 %q，调课只能在同一学期内进行，原课表未修改: %w", item.Semester, semester, ErrInvalid)
+	}
+
 	item.Week = req.Week
 	item.DayOfWeek = req.DayOfWeek
 	item.TimeSlotID = req.TimeSlotID
@@ -265,7 +305,7 @@ func (s *scheduleService) Move(ctx context.Context, req *dto.MoveScheduleRequest
 	if err := s.schedules.Update(ctx, item); err != nil {
 		return nil, fmt.Errorf("update schedule: %w", err)
 	}
-	logID, err := s.recordAdjustment(ctx, req.ScheduleID, constants.ActionMove, map[string]any{"week": req.Week, "day_of_week": req.DayOfWeek, "time_slot_id": req.TimeSlotID, "classroom_id": req.ClassroomID})
+	logID, err := s.recordAdjustment(ctx, semester, req.ScheduleID, constants.ActionMove, map[string]any{"semester": semester, "week": req.Week, "day_of_week": req.DayOfWeek, "time_slot_id": req.TimeSlotID, "classroom_id": req.ClassroomID})
 	if err != nil {
 		return nil, err
 	}
@@ -273,15 +313,22 @@ func (s *scheduleService) Move(ctx context.Context, req *dto.MoveScheduleRequest
 	if err != nil {
 		return nil, err
 	}
-	conflicts, err := s.CheckConflicts(ctx)
+	conflicts, err := s.CheckConflicts(ctx, semester)
 	if err != nil {
 		return nil, err
 	}
 	return &dto.AdjustmentResponse{Schedule: responses[0], Conflicts: conflicts, LogID: logID}, nil
 }
 
-func (s *scheduleService) ListAdjustments(ctx context.Context, page, pageSize int) ([]dto.AdjustmentLogResponse, int64, error) {
-	items, total, err := s.adjustments.List(ctx, page, pageSize)
+func (s *scheduleService) ListAdjustments(ctx context.Context, semester string, page, pageSize int) ([]dto.AdjustmentLogResponse, int64, error) {
+	semester, err := s.resolveSemester(ctx, semester)
+	if err != nil {
+		return nil, 0, err
+	}
+	if semester == "" {
+		return []dto.AdjustmentLogResponse{}, 0, nil
+	}
+	items, total, err := s.adjustments.List(ctx, semester, page, pageSize)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list adjustment logs: %w", err)
 	}
@@ -289,6 +336,7 @@ func (s *scheduleService) ListAdjustments(ctx context.Context, page, pageSize in
 	for i := range items {
 		out = append(out, dto.AdjustmentLogResponse{
 			ID:         items[i].ID,
+			Semester:   items[i].Semester,
 			ScheduleID: items[i].ScheduleID,
 			Action:     items[i].Action,
 			Detail:     items[i].Detail,
@@ -383,12 +431,24 @@ func (s *scheduleService) CourseDensity(ctx context.Context) ([]dto.CourseDensit
 	return out, nil
 }
 
-func (s *scheduleService) recordAdjustment(ctx context.Context, scheduleID uint, action string, detail any) (uint, error) {
+func (s *scheduleService) resolveSemester(ctx context.Context, requested string) (string, error) {
+	semester := strings.TrimSpace(requested)
+	if semester != "" {
+		return semester, nil
+	}
+	semester, err := s.schedules.LatestSemester(ctx)
+	if err != nil {
+		return "", fmt.Errorf("resolve latest semester: %w", err)
+	}
+	return semester, nil
+}
+
+func (s *scheduleService) recordAdjustment(ctx context.Context, semester string, scheduleID uint, action string, detail any) (uint, error) {
 	data, err := json.Marshal(detail)
 	if err != nil {
 		return 0, fmt.Errorf("marshal adjustment detail: %w", err)
 	}
-	log := &model.AdjustmentLog{ScheduleID: scheduleID, Action: action, Detail: string(data)}
+	log := &model.AdjustmentLog{Semester: semester, ScheduleID: scheduleID, Action: action, Detail: string(data)}
 	if err := s.adjustments.Create(ctx, log); err != nil {
 		return 0, fmt.Errorf("record adjustment: %w", err)
 	}
@@ -452,33 +512,33 @@ func (s *scheduleService) detectConflicts(ctx context.Context, items []model.Sch
 	}
 
 	for _, item := range items {
-		slotKey := fmt.Sprintf("%d-%d-%d", item.Week, item.DayOfWeek, item.TimeSlotID)
+		slotKey := fmt.Sprintf("%s-%d-%d-%d", item.Semester, item.Week, item.DayOfWeek, item.TimeSlotID)
 		if existing, ok := teacherSlots[slotKey+"-t-"+fmt.Sprint(item.TeacherID)]; ok && existing.ID != item.ID {
 			conflicts = append(conflicts, dto.ConflictResponse{
 				Type: constants.ConflictTeacherTime, EntityType: "teacher", EntityID: item.TeacherID,
-				EntityName: teacherMap[item.TeacherID].Name, Week: item.Week, DayOfWeek: item.DayOfWeek, TimeSlotID: item.TimeSlotID,
-				Suggestion: fmt.Sprintf("teacher already has a lesson at week %d day %d slot %d; move one of the lessons", item.Week, item.DayOfWeek, item.TimeSlotID),
+				EntityName: teacherMap[item.TeacherID].Name, Semester: item.Semester, Week: item.Week, DayOfWeek: item.DayOfWeek, TimeSlotID: item.TimeSlotID,
+				Suggestion: fmt.Sprintf("teacher already has a lesson at semester %s week %d day %d slot %d; move one of the lessons", item.Semester, item.Week, item.DayOfWeek, item.TimeSlotID),
 			})
 		}
 		if existing, ok := classSlots[slotKey+"-c-"+fmt.Sprint(item.ClassID)]; ok && existing.ID != item.ID {
 			conflicts = append(conflicts, dto.ConflictResponse{
 				Type: constants.ConflictClassTime, EntityType: "class", EntityID: item.ClassID,
-				EntityName: classMap[item.ClassID].Name, Week: item.Week, DayOfWeek: item.DayOfWeek, TimeSlotID: item.TimeSlotID,
-				Suggestion: fmt.Sprintf("class already has a lesson at week %d day %d slot %d; move one of the lessons", item.Week, item.DayOfWeek, item.TimeSlotID),
+				EntityName: classMap[item.ClassID].Name, Semester: item.Semester, Week: item.Week, DayOfWeek: item.DayOfWeek, TimeSlotID: item.TimeSlotID,
+				Suggestion: fmt.Sprintf("class already has a lesson at semester %s week %d day %d slot %d; move one of the lessons", item.Semester, item.Week, item.DayOfWeek, item.TimeSlotID),
 			})
 		}
 		if existing, ok := classroomSlots[slotKey+"-r-"+fmt.Sprint(item.ClassroomID)]; ok && existing.ID != item.ID {
 			conflicts = append(conflicts, dto.ConflictResponse{
 				Type: constants.ConflictClassroomTime, EntityType: "classroom", EntityID: item.ClassroomID,
-				EntityName: classroomMap[item.ClassroomID].Name, Week: item.Week, DayOfWeek: item.DayOfWeek, TimeSlotID: item.TimeSlotID,
-				Suggestion: fmt.Sprintf("classroom already has a lesson at week %d day %d slot %d; move one of the lessons", item.Week, item.DayOfWeek, item.TimeSlotID),
+				EntityName: classroomMap[item.ClassroomID].Name, Semester: item.Semester, Week: item.Week, DayOfWeek: item.DayOfWeek, TimeSlotID: item.TimeSlotID,
+				Suggestion: fmt.Sprintf("classroom already has a lesson at semester %s week %d day %d slot %d; move one of the lessons", item.Semester, item.Week, item.DayOfWeek, item.TimeSlotID),
 			})
 		}
 		if class, ok := classMap[item.ClassID]; ok {
 			if classroom, ok2 := classroomMap[item.ClassroomID]; ok2 && class.StudentCount > classroom.Capacity {
 				conflicts = append(conflicts, dto.ConflictResponse{
 					Type: constants.ConflictClassroomCap, EntityType: "class", EntityID: item.ClassID,
-					EntityName: class.Name, Week: item.Week, DayOfWeek: item.DayOfWeek, TimeSlotID: item.TimeSlotID,
+					EntityName: class.Name, Semester: item.Semester, Week: item.Week, DayOfWeek: item.DayOfWeek, TimeSlotID: item.TimeSlotID,
 					Suggestion: fmt.Sprintf("class size %d exceeds classroom capacity %d; choose a larger classroom", class.StudentCount, classroom.Capacity),
 				})
 			}
@@ -487,7 +547,7 @@ func (s *scheduleService) detectConflicts(ctx context.Context, items []model.Sch
 			if slot, ok2 := slotMap[item.TimeSlotID]; ok2 && contains(teacher.UnavailableSlots, slot.Code) {
 				conflicts = append(conflicts, dto.ConflictResponse{
 					Type: constants.ConflictTeacherPref, EntityType: "teacher", EntityID: item.TeacherID,
-					EntityName: teacher.Name, Week: item.Week, DayOfWeek: item.DayOfWeek, TimeSlotID: item.TimeSlotID,
+					EntityName: teacher.Name, Semester: item.Semester, Week: item.Week, DayOfWeek: item.DayOfWeek, TimeSlotID: item.TimeSlotID,
 					Suggestion: fmt.Sprintf("slot %s is in the teacher's unavailable periods; choose another time", slot.Code),
 				})
 			}

@@ -23,6 +23,7 @@ type GenerateScheduleRequest struct {
 
 // GenerateScheduleResponse is the result of a scheduling run.
 type GenerateScheduleResponse struct {
+	Semester  string             `json:"semester"`
 	Schedules []ScheduleResponse `json:"schedules"`
 	Conflicts []ConflictResponse `json:"conflicts"`
 	Generated int                `json:"generated"`
@@ -32,6 +33,7 @@ type GenerateScheduleResponse struct {
 // ScheduleResponse is a timetable entry enriched with related names.
 type ScheduleResponse struct {
 	ID            uint   `json:"id"`
+	Semester      string `json:"semester"`
 	Week          uint   `json:"week"`
 	DayOfWeek     int    `json:"day_of_week"`
 	TimeSlotID    uint   `json:"time_slot_id"`
@@ -51,17 +53,19 @@ type ScheduleResponse struct {
 
 // SwapScheduleRequest swaps time and classroom of two timetable entries.
 type SwapScheduleRequest struct {
-	ScheduleAID uint `json:"schedule_a_id" binding:"required"`
-	ScheduleBID uint `json:"schedule_b_id" binding:"required"`
+	Semester    string `json:"semester" binding:"omitempty,max=128"`
+	ScheduleAID uint   `json:"schedule_a_id" binding:"required"`
+	ScheduleBID uint   `json:"schedule_b_id" binding:"required"`
 }
 
 // MoveScheduleRequest moves a timetable entry to a new free slot.
 type MoveScheduleRequest struct {
-	ScheduleID  uint `json:"schedule_id" binding:"required"`
-	Week        uint `json:"week" binding:"required,gte=1"`
-	DayOfWeek   int  `json:"day_of_week" binding:"required,gte=1,lte=7"`
-	TimeSlotID  uint `json:"time_slot_id" binding:"required"`
-	ClassroomID uint `json:"classroom_id" binding:"required"`
+	Semester    string `json:"semester" binding:"omitempty,max=128"`
+	ScheduleID  uint   `json:"schedule_id" binding:"required"`
+	Week        uint   `json:"week" binding:"required,gte=1"`
+	DayOfWeek   int    `json:"day_of_week" binding:"required,gte=1,lte=7"`
+	TimeSlotID  uint   `json:"time_slot_id" binding:"required"`
+	ClassroomID uint   `json:"classroom_id" binding:"required"`
 }
 
 // AdjustmentResponse is the result of a manual adjustment.
@@ -74,6 +78,7 @@ type AdjustmentResponse struct {
 // AdjustmentLogResponse is an audit history entry.
 type AdjustmentLogResponse struct {
 	ID         uint   `json:"id"`
+	Semester   string `json:"semester"`
 	ScheduleID uint   `json:"schedule_id"`
 	Action     string `json:"action"`
 	Detail     string `json:"detail"`
@@ -82,7 +87,8 @@ type AdjustmentLogResponse struct {
 
 // ExportScheduleRequest is the query payload for timetable export.
 type ExportScheduleRequest struct {
-	Type string `form:"type" binding:"required,oneof=class teacher classroom"`
-	ID   uint   `form:"id" binding:"required,gte=1"`
-	Week uint   `form:"week" binding:"omitempty,gte=1"`
+	Semester string `form:"semester" binding:"omitempty,max=128"`
+	Type     string `form:"type" binding:"required,oneof=class teacher classroom"`
+	ID       uint   `form:"id" binding:"required,gte=1"`
+	Week     uint   `form:"week" binding:"omitempty,gte=1"`
 }

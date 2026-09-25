@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"errors"
+
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 
@@ -79,15 +81,15 @@ func TestScheduleServiceDetectConflicts(t *testing.T) {
 	}
 
 	schedules := []model.Schedule{
-		{Week: 1, DayOfWeek: 1, TimeSlotID: slot1.ID, ClassroomID: smallRoom.ID, TeacherID: teacher.ID, ClassID: class.ID, CourseID: course.ID},
-		{Week: 1, DayOfWeek: 1, TimeSlotID: slot1.ID, ClassroomID: bigRoom.ID, TeacherID: teacher.ID, ClassID: class.ID, CourseID: course.ID},
+		{Semester: "2025-2026-1", Week: 1, DayOfWeek: 1, TimeSlotID: slot1.ID, ClassroomID: smallRoom.ID, TeacherID: teacher.ID, ClassID: class.ID, CourseID: course.ID},
+		{Semester: "2025-2026-1", Week: 1, DayOfWeek: 1, TimeSlotID: slot1.ID, ClassroomID: bigRoom.ID, TeacherID: teacher.ID, ClassID: class.ID, CourseID: course.ID},
 	}
 	if err := db.Create(&schedules).Error; err != nil {
 		t.Fatal(err)
 	}
 
 	svc := newScheduleService(t, db)
-	conflicts, err := svc.CheckConflicts(ctx)
+	conflicts, err := svc.CheckConflicts(ctx, "2025-2026-1")
 	if err != nil {
 		t.Fatalf("check conflicts: %v", err)
 	}
@@ -152,6 +154,7 @@ func TestScheduleServiceGenerateAllowsParallelClasses(t *testing.T) {
 
 	svc := newScheduleService(t, db)
 	resp, err := svc.Generate(ctx, &dto.GenerateScheduleRequest{
+		Semester:      "2025-2026-1",
 		Weeks:         1,
 		DaysPerWeek:   1,
 		PeriodsPerDay: 1,
@@ -202,6 +205,7 @@ func TestScheduleServiceGenerateReplacesStaleWeeks(t *testing.T) {
 	svc := newScheduleService(t, db)
 	req := func(weeks int) *dto.GenerateScheduleRequest {
 		return &dto.GenerateScheduleRequest{
+			Semester:      "2025-2026-1",
 			Weeks:         weeks,
 			DaysPerWeek:   1,
 			PeriodsPerDay: 1,
@@ -220,7 +224,7 @@ func TestScheduleServiceGenerateReplacesStaleWeeks(t *testing.T) {
 	if _, err := svc.Generate(ctx, req(1)); err != nil {
 		t.Fatalf("generate 1 week: %v", err)
 	}
-	items, err := svc.List(ctx, nil, nil, nil, nil)
+	items, err := svc.List(ctx, "2025-2026-1", nil, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("list schedules: %v", err)
 	}
@@ -229,5 +233,186 @@ func TestScheduleServiceGenerateReplacesStaleWeeks(t *testing.T) {
 	}
 	if items[0].Week != 1 {
 		t.Fatalf("expected only week 1 to remain, got week %d", items[0].Week)
+	}
+}
+
+func TestScheduleServiceKeepsOtherSemestersAndDefaultsToLatest(t *testing.T) {
+	ctx := context.Background()
+	db := newScheduleTestDB(t)
+
+	slot := &model.TimeSlot{Code: "1", Name: "第一节", StartTime: "08:00", EndTime: "09:40"}
+	if err := db.Create(slot).Error; err != nil {
+		t.Fatal(err)
+	}
+	room := &model.Classroom{Code: "R301", Name: "301教室", Capacity: 50}
+	if err := db.Create(room).Error; err != nil {
+		t.Fatal(err)
+	}
+	teacher := &model.Teacher{Name: "张老师", EmployeeNo: "T001", Subjects: []string{"数学"}}
+	if err := db.Create(teacher).Error; err != nil {
+		t.Fatal(err)
+	}
+	class := &model.Class{Name: "一班", StudentCount: 40, Grade: "高一"}
+	if err := db.Create(class).Error; err != nil {
+		t.Fatal(err)
+	}
+	course := &model.Course{Name: "数学", Code: "MATH", Duration: 1}
+	if err := db.Create(course).Error; err != nil {
+		t.Fatal(err)
+	}
+	svc := newScheduleService(t, db)
+	requestForSemester := func(semester string, weeks int) *dto.GenerateScheduleRequest {
+		return &dto.GenerateScheduleRequest{
+			Semester:      semester,
+			Weeks:         weeks,
+			DaysPerWeek:   1,
+			PeriodsPerDay: 1,
+			Courses:       []dto.CourseRequirement{{CourseID: course.ID, WeeklyPeriods: 1, ClassID: class.ID, TeacherID: teacher.ID}},
+			TeacherIDs:    []uint{teacher.ID},
+			ClassIDs:      []uint{class.ID},
+			ClassroomIDs:  []uint{room.ID},
+		}
+	}
+
+	if _, err := svc.Generate(ctx, requestForSemester("2024-2025-2", 2)); err != nil {
+		t.Fatalf("generate old semester: %v", err)
+	}
+	if _, err := svc.Generate(ctx, requestForSemester("2025-2026-1", 1)); err != nil {
+		t.Fatalf("generate new semester: %v", err)
+	}
+
+	oldItems, err := svc.List(ctx, "2024-2025-2", nil, nil, nil, nil)
+	if err != nil {
+		t.Fatalf("list old semester: %v", err)
+	}
+	if len(oldItems) != 2 {
+		t.Fatalf("expected old semester to keep 2 lessons, got %d", len(oldItems))
+	}
+	defaultItems, err := svc.List(ctx, "", nil, nil, nil, nil)
+	if err != nil {
+		t.Fatalf("list default semester: %v", err)
+	}
+	if len(defaultItems) != 1 || defaultItems[0].Semester != "2025-2026-1" {
+		t.Fatalf("expected default list to use the latest semester, got %+v", defaultItems)
+	}
+}
+
+func TestScheduleServiceGenerateEmptySemesterDoesNotChangeSchedules(t *testing.T) {
+	ctx := context.Background()
+	db := newScheduleTestDB(t)
+
+	slot := &model.TimeSlot{Code: "1", Name: "第一节", StartTime: "08:00", EndTime: "09:40"}
+	room := &model.Classroom{Code: "R301", Name: "301教室", Capacity: 50}
+	teacher := &model.Teacher{Name: "张老师", EmployeeNo: "T001"}
+	class := &model.Class{Name: "一班", StudentCount: 40, Grade: "高一"}
+	course := &model.Course{Name: "数学", Code: "MATH", Duration: 1}
+	for _, item := range []any{slot, room, teacher, class, course} {
+		if err := db.Create(item).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	existing := model.Schedule{Semester: "2024-2025-2", Week: 1, DayOfWeek: 1, TimeSlotID: slot.ID, ClassroomID: room.ID, TeacherID: teacher.ID, ClassID: class.ID, CourseID: course.ID}
+	if err := db.Create(&existing).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	svc := newScheduleService(t, db)
+	_, err := svc.Generate(ctx, &dto.GenerateScheduleRequest{
+		Semester:      "   ",
+		Weeks:         1,
+		DaysPerWeek:   1,
+		PeriodsPerDay: 1,
+		Courses:       []dto.CourseRequirement{{CourseID: course.ID, WeeklyPeriods: 1, ClassID: class.ID, TeacherID: teacher.ID}},
+	})
+	if !errors.Is(err, service.ErrInvalid) {
+		t.Fatalf("expected invalid semester error, got %v", err)
+	}
+	var count int64
+	if err := db.Model(&model.Schedule{}).Count(&count).Error; err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Fatalf("expected original schedule to remain unchanged, got %d schedules", count)
+	}
+}
+
+func TestScheduleServiceSwapRejectsCrossSemester(t *testing.T) {
+	ctx := context.Background()
+	db := newScheduleTestDB(t)
+
+	slot := &model.TimeSlot{Code: "1", Name: "第一节", StartTime: "08:00", EndTime: "09:40"}
+	room := &model.Classroom{Code: "R301", Name: "301教室", Capacity: 50}
+	teacher := &model.Teacher{Name: "张老师", EmployeeNo: "T001"}
+	class := &model.Class{Name: "一班", StudentCount: 40, Grade: "高一"}
+	course := &model.Course{Name: "数学", Code: "MATH", Duration: 1}
+	for _, item := range []any{slot, room, teacher, class, course} {
+		if err := db.Create(item).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	oldLesson := model.Schedule{Semester: "2024-2025-2", Week: 1, DayOfWeek: 1, TimeSlotID: slot.ID, ClassroomID: room.ID, TeacherID: teacher.ID, ClassID: class.ID, CourseID: course.ID}
+	newLesson := model.Schedule{Semester: "2025-2026-1", Week: 1, DayOfWeek: 1, TimeSlotID: slot.ID, ClassroomID: room.ID, TeacherID: teacher.ID, ClassID: class.ID, CourseID: course.ID}
+	if err := db.Create(&oldLesson).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&newLesson).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	svc := newScheduleService(t, db)
+	_, err := svc.Swap(ctx, &dto.SwapScheduleRequest{
+		Semester:    "2025-2026-1",
+		ScheduleAID: oldLesson.ID,
+		ScheduleBID: newLesson.ID,
+	})
+	if !errors.Is(err, service.ErrInvalid) {
+		t.Fatalf("expected cross-semester swap to be invalid, got %v", err)
+	}
+	var stored model.Schedule
+	if err := db.First(&stored, oldLesson.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if stored.Semester != oldLesson.Semester {
+		t.Fatalf("expected old lesson semester to remain %q, got %q", oldLesson.Semester, stored.Semester)
+	}
+}
+
+func TestScheduleServiceMoveRejectsSemesterChange(t *testing.T) {
+	ctx := context.Background()
+	db := newScheduleTestDB(t)
+
+	slot := &model.TimeSlot{Code: "1", Name: "第一节", StartTime: "08:00", EndTime: "09:40"}
+	room := &model.Classroom{Code: "R301", Name: "301教室", Capacity: 50}
+	teacher := &model.Teacher{Name: "张老师", EmployeeNo: "T001"}
+	class := &model.Class{Name: "一班", StudentCount: 40, Grade: "高一"}
+	course := &model.Course{Name: "数学", Code: "MATH", Duration: 1}
+	for _, item := range []any{slot, room, teacher, class, course} {
+		if err := db.Create(item).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	existing := model.Schedule{Semester: "2024-2025-2", Week: 1, DayOfWeek: 1, TimeSlotID: slot.ID, ClassroomID: room.ID, TeacherID: teacher.ID, ClassID: class.ID, CourseID: course.ID}
+	if err := db.Create(&existing).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	svc := newScheduleService(t, db)
+	_, err := svc.Move(ctx, &dto.MoveScheduleRequest{
+		Semester:    "2025-2026-1",
+		ScheduleID:  existing.ID,
+		Week:        1,
+		DayOfWeek:   1,
+		TimeSlotID:  slot.ID,
+		ClassroomID: room.ID,
+	})
+	if !errors.Is(err, service.ErrInvalid) {
+		t.Fatalf("expected cross-semester move to be invalid, got %v", err)
+	}
+	var stored model.Schedule
+	if err := db.First(&stored, existing.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if stored.Semester != "2024-2025-2" {
+		t.Fatalf("expected semester to remain unchanged, got %q", stored.Semester)
 	}
 }

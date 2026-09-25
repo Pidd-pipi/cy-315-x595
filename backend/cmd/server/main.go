@@ -109,6 +109,26 @@ func migrate(db *gorm.DB) error {
 	); err != nil {
 		return fmt.Errorf("auto migrate: %w", err)
 	}
+	if err := backfillSemesters(db); err != nil {
+		return fmt.Errorf("backfill semesters: %w", err)
+	}
+	return nil
+}
+
+func backfillSemesters(db *gorm.DB) error {
+	const legacySemester = "未命名学期"
+	if err := db.Exec(
+		"UPDATE schedules SET semester = ? WHERE semester = '' OR semester IS NULL",
+		legacySemester,
+	).Error; err != nil {
+		return fmt.Errorf("backfill schedule semesters: %w", err)
+	}
+	if err := db.Exec(
+		"UPDATE adjustment_logs SET semester = ? WHERE semester = '' OR semester IS NULL",
+		legacySemester,
+	).Error; err != nil {
+		return fmt.Errorf("backfill adjustment semesters: %w", err)
+	}
 	return nil
 }
 

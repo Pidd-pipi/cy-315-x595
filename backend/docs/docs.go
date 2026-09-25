@@ -7,10 +7,10 @@ const docTemplate = `{
     "schemes": {{ marshal .Schemes }},
     "swagger": "2.0",
     "info": {
-        "description": "{{escape .Description}}",
-        "title": "{{.Title}}",
+        "description": "教室排课、教室资源管理和冲突检测 RESTful API。",
+        "title": "教室排课助手 API",
         "contact": {},
-        "version": "{{.Version}}"
+        "version": "1.0.0"
     },
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
@@ -500,6 +500,12 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "string",
+                        "description": "semester; defaults to the latest generated semester",
+                        "name": "semester",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "description": "class id",
                         "name": "class_id",
@@ -549,6 +555,12 @@ const docTemplate = `{
                         "description": "page size",
                         "name": "page_size",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "semester; defaults to the latest generated semester",
+                        "name": "semester",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -577,7 +589,15 @@ const docTemplate = `{
                             "$ref": "#/definitions/github_com_gbschedule_gbschedule_internal_dto.Response"
                         }
                     }
-                }
+                },
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "semester; defaults to the latest generated semester",
+                        "name": "semester",
+                        "in": "query"
+                    }
+                ]
             }
         },
         "/api/v1/schedules/export": {
@@ -590,6 +610,12 @@ const docTemplate = `{
                 ],
                 "summary": "Export a timetable as JSON or CSV",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "semester; defaults to the latest generated semester",
+                        "name": "semester",
+                        "in": "query"
+                    },
                     {
                         "type": "string",
                         "description": "class|teacher|classroom",
@@ -1368,6 +1394,10 @@ const docTemplate = `{
                 "week": {
                     "type": "integer",
                     "minimum": 1
+                },
+                "semester": {
+                    "type": "string",
+                    "maxLength": 128
                 }
             }
         },
@@ -1395,6 +1425,10 @@ const docTemplate = `{
                 },
                 "schedule_b_id": {
                     "type": "integer"
+                },
+                "semester": {
+                    "type": "string",
+                    "maxLength": 128
                 }
             }
         },
